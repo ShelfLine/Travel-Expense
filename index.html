@@ -82,7 +82,7 @@
                 </div>
                 <div>
                     <h1 class="text-sm sm:text-base font-bold tracking-tight text-white leading-tight">JKumar Travel Expense</h1>
-                    <p class="text-[10px] text-slate-400">Smart Auto-Suggest &bull; Round Trips</p>
+                    <p class="text-[10px] text-slate-400">Month-Wise Totals &bull; Round Trips</p>
                 </div>
             </div>
             
@@ -105,7 +105,7 @@
     </header>
 
     <!-- Main Content Container -->
-    <main class="max-w-3xl mx-auto px-3 py-4 flex-grow w-full no-print">
+    <main class="max-w-3xl mx-auto px-3 py-4 flex-grow w-full no-print space-y-4">
 
         <!-- TAB 1: DASHBOARD -->
         <div id="tab-dashboard" class="tab-content space-y-4">
@@ -129,6 +129,16 @@
                 </h3>
                 <div class="h-64 relative flex items-center justify-center">
                     <canvas id="expenseChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Month-Wise Total Expense Breakdown -->
+            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg">
+                <h3 class="font-bold text-white text-sm mb-3 flex items-center gap-2">
+                    <i data-lucide="calendar" class="w-4 h-4 text-green-400"></i> Month-Wise Total Expense (₹)
+                </h3>
+                <div id="monthWiseContainer" class="space-y-2.5">
+                    <!-- Populated via JS -->
                 </div>
             </div>
         </div>
@@ -317,6 +327,7 @@
 
             if(tabName === 'dashboard') {
                 renderChart();
+                renderMonthWiseList();
             }
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -568,6 +579,7 @@
             renderPrintTable();
             renderStats();
             renderChart();
+            renderMonthWiseList();
             if(typeof lucide !== 'undefined') lucide.createIcons();
         }
 
@@ -581,6 +593,43 @@
             const month = months[d.getMonth()];
             const year = d.getFullYear();
             return `${day}-${month}-${year}`;
+        }
+
+        // Render Month-Wise Total Expenses List
+        function renderMonthWiseList() {
+            const container = document.getElementById('monthWiseContainer');
+            if(!container) return;
+            container.innerHTML = '';
+
+            // Group totals by YYYY-MM
+            const monthTotals = {};
+            expenses.forEach(item => {
+                if(item.date && item.date.length >= 7) {
+                    const ym = item.date.substring(0, 7);
+                    monthTotals[ym] = (monthTotals[ym] || 0) + item.fare;
+                }
+            });
+
+            const sortedYm = Object.keys(monthTotals).sort().reverse();
+
+            if(sortedYm.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500">No monthly records available.</p>`;
+                return;
+            }
+
+            sortedYm.forEach(ym => {
+                const [year, monthNum] = ym.split('-');
+                const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                const monthName = monthNames[parseInt(monthNum, 10) - 1];
+                
+                const row = document.createElement('div');
+                row.className = "flex justify-between items-center py-2 px-3 rounded-xl bg-slate-900/60 border border-slate-700/50 text-xs";
+                row.innerHTML = `
+                    <span class="font-medium text-slate-300">${monthName} ${year}</span>
+                    <span class="font-bold text-green-400">₹${monthTotals[ym]}</span>
+                `;
+                container.appendChild(row);
+            });
         }
 
         // Render Dashboard Table Rows
