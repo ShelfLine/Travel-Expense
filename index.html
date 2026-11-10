@@ -244,7 +244,7 @@
                     <!-- Month Filter Dropdown -->
                     <div class="flex items-center gap-1.5">
                         <label class="text-[11px] text-slate-400 font-medium">Filter:</label>
-                        <select id="monthFilter" onchange="renderTable(); renderPrintTable(); renderStats(); renderChart();" class="bg-slate-900 border border-cardBorder rounded-xl px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-emerald-500 shadow-inner">
+                        <select id="monthFilter" onchange="applyFilterAndRefresh()" class="bg-slate-900 border border-cardBorder rounded-xl px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-emerald-500 shadow-inner">
                             <option value="ALL">All Months</option>
                         </select>
                     </div>
@@ -554,7 +554,7 @@
             const monthsSet = new Set();
             
             expenses.forEach(item => {
-                if (item.date && item.date.length >= 7) {
+                if (item.date && typeof item.date === 'string' && item.date.length >= 7) {
                     monthsSet.add(item.date.substring(0, 7));
                 }
             });
@@ -572,7 +572,6 @@
                 monthFilterSelect.appendChild(opt);
             });
 
-            // Keep user's active filter selection if it still exists, else default to 'ALL'
             if (currentSelected === 'ALL' || monthsSet.has(currentSelected)) {
                 monthFilterSelect.value = currentSelected;
             } else {
@@ -580,7 +579,7 @@
             }
         }
 
-        // Get filtered expenses
+        // Get filtered expenses based on dropdown selection
         function getFilteredExpenses() {
             const monthFilterSelect = document.getElementById('monthFilter');
             const filterVal = monthFilterSelect ? monthFilterSelect.value : 'ALL';
@@ -588,7 +587,19 @@
             if (!filterVal || filterVal === 'ALL') {
                 return expenses;
             }
-            return expenses.filter(item => item.date && item.date.startsWith(filterVal));
+            
+            return expenses.filter(item => {
+                if (!item.date) return false;
+                const itemYM = item.date.substring(0, 7);
+                return itemYM === filterVal;
+            });
+        }
+
+        // Trigger filter refresh across views
+        function applyFilterAndRefresh() {
+            renderTable();
+            renderPrintTable();
+            renderStats();
         }
 
         // Export to Excel (CSV format)
