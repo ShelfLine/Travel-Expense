@@ -331,8 +331,8 @@
 
     <!-- Application Script -->
     <script>
-        // --- Tab Navigation Logic ---
-        function switchTab(tabName) {
+        // --- Tab Navigation Logic with Persistence ---
+        function switchTab(tabName, saveState = true) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(el => {
                 el.classList.remove('text-emerald-400');
@@ -344,19 +344,27 @@
                 }
             });
 
-            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+            const targetTab = document.getElementById(`tab-${tabName}`);
+            if(targetTab) targetTab.classList.remove('hidden');
+
             const activeBtn = document.getElementById(`btn-${tabName}`);
-            activeBtn.classList.remove('text-slate-400');
-            activeBtn.classList.add('text-emerald-400');
-            const activeSpan = activeBtn.querySelector('span');
-            if(activeSpan) {
-                activeSpan.classList.remove('font-medium');
-                activeSpan.classList.add('font-bold');
+            if(activeBtn) {
+                activeBtn.classList.remove('text-slate-400');
+                activeBtn.classList.add('text-emerald-400');
+                const activeSpan = activeBtn.querySelector('span');
+                if(activeSpan) {
+                    activeSpan.classList.remove('font-medium');
+                    activeSpan.classList.add('font-bold');
+                }
             }
 
             if(tabName === 'dashboard') {
                 renderChart();
                 renderMonthWiseList();
+            }
+
+            if (saveState) {
+                localStorage.setItem('jj_active_tab', tabName);
             }
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -481,15 +489,8 @@
             });
         }
 
-        // Prepare Form for Editing
+        // Prepare Form for Editing (Password-Free)
         function editExpense(id) {
-            const pwd = prompt("Enter password (8080) to edit this entry:");
-            if (pwd === null) return;
-            if (pwd !== "8080") {
-                alert("Incorrect password! Edit cancelled.");
-                return;
-            }
-
             const record = expenses.find(item => item.id === id);
             if (!record) return;
 
@@ -668,7 +669,6 @@
                         if (confirm(`Found ${importedData.length} records. Do you want to replace existing records or merge them?\nClick OK to Replace, Cancel to Merge.`)) {
                             expenses = importedData;
                         } else {
-                            // Merge by ID / uniqueness check
                             const existingIds = new Set(expenses.map(item => item.id));
                             importedData.forEach(item => {
                                 if (!existingIds.has(item.id)) {
@@ -684,7 +684,7 @@
                 } catch (err) {
                     alert("Error parsing backup file. Please ensure it's a valid JSON/TXT export.");
                 }
-                event.target.value = ''; // Reset file input
+                event.target.value = '';
             };
             reader.readAsText(file);
         }
@@ -809,7 +809,7 @@
                     </td>
                     <td class="py-2.5 px-2 text-right whitespace-nowrap">
                         <div class="flex items-center justify-end gap-1">
-                            <button onclick="editExpense(${item.id})" class="text-slate-400 hover:text-emerald-400 p-1 rounded transition" title="Edit with Password">
+                            <button onclick="editExpense(${item.id})" class="text-slate-400 hover:text-emerald-400 p-1 rounded transition" title="Edit Entry">
                                 <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                             </button>
                             <button onclick="deleteExpense(${item.id})" class="text-slate-400 hover:text-rose-400 p-1 rounded transition" title="Delete with Password">
@@ -928,8 +928,10 @@
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
-        // Initial Load
+        // Initial Load & Restore Last Active Tab
         saveAndRender();
+        const lastActiveTab = localStorage.getItem('jj_active_tab') || 'dashboard';
+        switchTab(lastActiveTab, false);
     </script>
 </body>
 </html>
