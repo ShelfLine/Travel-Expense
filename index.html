@@ -153,20 +153,25 @@
             </div>
         </div>
 
-        <!-- TAB 2: ADD NEW EXPENSE -->
+        <!-- TAB 2: ADD / EDIT EXPENSE -->
         <div id="tab-add" class="tab-content hidden space-y-4 animate-fadeIn">
             <div class="bg-cardBg border border-cardBorder rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl w-full max-w-full">
-                <div class="flex items-center gap-3 mb-4 pb-3 border-b border-cardBorder">
-                    <div class="bg-emerald-500/15 p-2 rounded-xl text-emerald-400 border border-emerald-500/20">
-                        <i data-lucide="plus-circle" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-cardBorder">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-emerald-500/15 p-2 rounded-xl text-emerald-400 border border-emerald-500/20">
+                            <i data-lucide="plus-circle" id="formHeaderIcon" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+                        </div>
+                        <div>
+                            <h2 id="formTitleText" class="text-sm sm:text-base font-bold text-white tracking-tight">Add New Expense</h2>
+                            <p id="formSubText" class="text-[11px] text-slate-400">Log your commute or site visit fare</p>
+                        </div>
                     </div>
-                    <div>
-                        <h2 class="text-sm sm:text-base font-bold text-white tracking-tight">Add New Expense</h2>
-                        <p class="text-[11px] text-slate-400">Log your commute or site visit fare</p>
-                    </div>
+                    <button id="cancelEditBtn" onclick="cancelEditMode()" class="hidden text-[11px] text-amber-400 bg-amber-500/10 px-2 py-1 rounded-lg border border-amber-500/20 font-medium">Cancel Edit</button>
                 </div>
                 
                 <form id="expenseForm" class="space-y-3.5 w-full">
+                    <input type="hidden" id="editRecordId" value="">
+                    
                     <div class="w-full">
                         <label class="block text-[11px] sm:text-xs font-semibold text-slate-300 mb-1 uppercase tracking-wider">Date</label>
                         <div class="w-full bg-slate-900/80 border border-cardBorder rounded-xl overflow-hidden focus-within:border-emerald-500 transition shadow-inner">
@@ -211,14 +216,14 @@
                     </div>
 
                     <!-- Round Trip Checkbox Option -->
-                    <div class="flex items-center gap-2.5 pt-1.5 bg-slate-900/40 p-3 rounded-xl border border-cardBorder">
+                    <div id="roundTripContainer" class="flex items-center gap-2.5 pt-1.5 bg-slate-900/40 p-3 rounded-xl border border-cardBorder">
                         <input type="checkbox" id="isRoundTrip" class="w-4 h-4 accent-emerald-500 rounded-md bg-slate-900 border-cardBorder cursor-pointer">
                         <label for="isRoundTrip" class="text-[11px] sm:text-xs font-medium text-slate-200 cursor-pointer select-none">
                             Round Trip <span class="text-slate-400 block text-[9px]">Auto-generate return journey with swapped locations</span>
                         </label>
                     </div>
 
-                    <button type="submit" class="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-slate-950 font-bold py-3 px-4 rounded-xl text-xs sm:text-sm transition shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 mt-1">
+                    <button type="submit" id="formSubmitBtn" class="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-slate-950 font-bold py-3 px-4 rounded-xl text-xs sm:text-sm transition shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 mt-1">
                         <i data-lucide="check-circle-2" class="w-4 h-4"></i> Save Record
                     </button>
                 </form>
@@ -254,7 +259,7 @@
                                 <th class="py-2.5 px-2">From / To</th>
                                 <th class="py-2.5 px-2 w-14 text-right">Fare</th>
                                 <th class="py-2.5 px-2 w-20">Mode</th>
-                                <th class="py-2.5 px-2 w-10 text-right">Act</th>
+                                <th class="py-2.5 px-2 w-16 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="expenseTableBody" class="divide-y divide-cardBorder/60 text-slate-200">
@@ -416,12 +421,13 @@
             });
         }
 
-        // Form Submission with Round Trip & Auto-Suggest Support
+        // Form Submission Handler (Handles both Create & Edit)
         const expenseForm = document.getElementById('expenseForm');
         if(expenseForm) {
             expenseForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 
+                const editId = document.getElementById('editRecordId').value;
                 const dateVal = document.getElementById('expenseDate').value;
                 const fromVal = document.getElementById('fromLoc').value.trim();
                 const toVal = document.getElementById('toLoc').value.trim();
@@ -429,37 +435,99 @@
                 const modeVal = document.getElementById('refMode').value;
                 const isRoundTrip = document.getElementById('isRoundTrip').checked;
 
-                // 1. Add Onward Journey
-                const onwardExpense = {
-                    id: Date.now(),
-                    date: dateVal,
-                    from: fromVal,
-                    to: toVal,
-                    fare: fareVal,
-                    ref: modeVal
-                };
-                expenses.push(onwardExpense);
-
-                // 2. If Round Trip is checked, automatically add return journey (swapped From/To)
-                if (isRoundTrip) {
-                    const returnExpense = {
-                        id: Date.now() + 1,
+                if (editId) {
+                    // Update existing record
+                    expenses = expenses.map(item => {
+                        if (item.id == editId) {
+                            return { ...item, date: dateVal, from: fromVal, to: toVal, fare: fareVal, ref: modeVal };
+                        }
+                        return item;
+                    });
+                    cancelEditMode();
+                } else {
+                    // Add Onward Journey
+                    const onwardExpense = {
+                        id: Date.now(),
                         date: dateVal,
-                        from: toVal,
-                        to: fromVal,
+                        from: fromVal,
+                        to: toVal,
                         fare: fareVal,
                         ref: modeVal
                     };
-                    expenses.push(returnExpense);
+                    expenses.push(onwardExpense);
+
+                    // If Round Trip is checked, automatically add return journey (swapped From/To)
+                    if (isRoundTrip) {
+                        const returnExpense = {
+                            id: Date.now() + 1,
+                            date: dateVal,
+                            from: toVal,
+                            to: fromVal,
+                            fare: fareVal,
+                            ref: modeVal
+                        };
+                        expenses.push(returnExpense);
+                    }
                 }
 
-                saveAndRender();
+                // Keep current filter selection active upon save
+                const monthFilterSelect = document.getElementById('monthFilter');
+                const activeFilter = monthFilterSelect ? monthFilterSelect.value : 'ALL';
+
+                saveAndRender(activeFilter);
                 expenseForm.reset();
                 document.getElementById('expenseDate').value = new Date().toISOString().split('T')[0];
                 
                 // Automatically switch to Records tab to see entries
                 switchTab('records');
             });
+        }
+
+        // Prepare Form for Editing
+        function editExpense(id) {
+            const pwd = prompt("Enter password (8080) to edit this entry:");
+            if (pwd === null) return;
+            if (pwd !== "8080") {
+                alert("Incorrect password! Edit cancelled.");
+                return;
+            }
+
+            const record = expenses.find(item => item.id === id);
+            if (!record) return;
+
+            document.getElementById('editRecordId').value = record.id;
+            document.getElementById('expenseDate').value = record.date;
+            document.getElementById('fromLoc').value = record.from;
+            document.getElementById('toLoc').value = record.to;
+            document.getElementById('fareAmt').value = record.fare;
+            document.getElementById('refMode').value = record.ref;
+
+            // Hide Round Trip option during edit
+            document.getElementById('roundTripContainer').classList.add('hidden');
+            document.getElementById('formTitleText').textContent = "Edit Expense Record";
+            document.getElementById('formSubText').textContent = `Modifying record #${id}`;
+            document.getElementById('cancelEditBtn').classList.remove('hidden');
+            
+            const submitBtn = document.getElementById('formSubmitBtn');
+            submitBtn.innerHTML = `<i data-lucide="save" class="w-4 h-4"></i> Update Record`;
+            if(typeof lucide !== 'undefined') lucide.createIcons();
+
+            switchTab('add');
+        }
+
+        // Cancel Edit Mode
+        function cancelEditMode() {
+            document.getElementById('editRecordId').value = '';
+            document.getElementById('expenseForm').reset();
+            document.getElementById('expenseDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('roundTripContainer').classList.remove('hidden');
+            document.getElementById('formTitleText').textContent = "Add New Expense";
+            document.getElementById('formSubText').textContent = "Log your commute or site visit fare";
+            document.getElementById('cancelEditBtn').classList.add('hidden');
+            
+            const submitBtn = document.getElementById('formSubmitBtn');
+            submitBtn.innerHTML = `<i data-lucide="check-circle-2" class="w-4 h-4"></i> Save Record`;
+            if(typeof lucide !== 'undefined') lucide.createIcons();
         }
 
         // Populate Location Auto-Suggest Datalist
@@ -495,6 +563,7 @@
             });
 
             const sortedMonths = Array.from(monthsSet).sort().reverse();
+            const currentSelected = selectedMonthValue || monthFilterSelect.value || 'ALL';
 
             monthFilterSelect.innerHTML = `<option value="ALL">All Months</option>`;
             sortedMonths.forEach(ym => {
@@ -507,8 +576,9 @@
                 monthFilterSelect.appendChild(opt);
             });
 
-            if (selectedMonthValue && (selectedMonthValue === 'ALL' || monthsSet.has(selectedMonthValue))) {
-                monthFilterSelect.value = selectedMonthValue;
+            // Ensure selection persists correctly if valid
+            if (currentSelected === 'ALL' || monthsSet.has(currentSelected)) {
+                monthFilterSelect.value = currentSelected;
             } else {
                 monthFilterSelect.value = 'ALL';
             }
@@ -518,7 +588,7 @@
         function getFilteredExpenses() {
             const monthFilterSelect = document.getElementById('monthFilter');
             const filterVal = monthFilterSelect ? monthFilterSelect.value : 'ALL';
-            if (filterVal === 'ALL') {
+            if (filterVal === 'ALL' || !filterVal) {
                 return expenses;
             }
             return expenses.filter(item => item.date && item.date.startsWith(filterVal));
@@ -528,7 +598,7 @@
         function exportToExcel() {
             const activeExpenses = getFilteredExpenses();
             if (activeExpenses.length === 0) {
-                alert("No records to export for the selected month!");
+                alert("No records to export for the selected filter!");
                 return;
             }
 
@@ -565,8 +635,11 @@
             const pwd = prompt("Enter password (8080) to delete this entry:");
             if (pwd === null) return;
             if (pwd === "8080") {
+                const monthFilterSelect = document.getElementById('monthFilter');
+                const activeMonth = monthFilterSelect ? monthFilterSelect.value : 'ALL';
+                
                 expenses = expenses.filter(item => item.id !== id);
-                saveAndRender();
+                saveAndRender(activeMonth);
             } else {
                 alert("Incorrect password! Deletion cancelled.");
             }
@@ -578,16 +651,17 @@
             if (pwd === null) return;
             if (pwd === "8080") {
                 expenses = [];
-                saveAndRender();
+                saveAndRender('ALL');
             } else {
                 alert("Incorrect password! Reset cancelled.");
             }
         }
 
         // Save to Device LocalStorage and Refresh UI
-        function saveAndRender() {
+        function saveAndRender(targetMonth = null) {
             const monthFilterSelect = document.getElementById('monthFilter');
-            const currentMonthVal = monthFilterSelect ? monthFilterSelect.value : 'ALL';
+            const currentMonthVal = targetMonth || (monthFilterSelect ? monthFilterSelect.value : 'ALL');
+            
             localStorage.setItem('jj_travel_expenses', JSON.stringify(expenses));
             
             updateMonthFilterOptions(currentMonthVal);
@@ -648,7 +722,7 @@
             });
         }
 
-        // Render Dashboard Table Rows (Compact mobile layout)
+        // Render Dashboard Table Rows
         function renderTable() {
             const tbody = document.getElementById('expenseTableBody');
             const badgeCount = document.getElementById('badgeCount');
@@ -681,9 +755,14 @@
                         </span>
                     </td>
                     <td class="py-2.5 px-2 text-right whitespace-nowrap">
-                        <button onclick="deleteExpense(${item.id})" class="text-slate-400 hover:text-rose-400 p-1 rounded transition" title="Delete with Password">
-                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                        </button>
+                        <div class="flex items-center justify-end gap-1">
+                            <button onclick="editExpense(${item.id})" class="text-slate-400 hover:text-emerald-400 p-1 rounded transition" title="Edit with Password">
+                                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button onclick="deleteExpense(${item.id})" class="text-slate-400 hover:text-rose-400 p-1 rounded transition" title="Delete with Password">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -698,7 +777,7 @@
             const filterVal = monthFilterSelect ? monthFilterSelect.value : 'ALL';
             
             let subtitleText = "Travel Expense Claim Slip";
-            if (filterVal !== 'ALL') {
+            if (filterVal !== 'ALL' && filterVal) {
                 const [year, monthNum] = filterVal.split('-');
                 const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
                 subtitleText = `Travel Expense Claim Slip - ${monthNames[parseInt(monthNum, 10) - 1]} ${year}`;
@@ -797,7 +876,7 @@
         }
 
         // Initial Load
-        saveAndRender();
+        saveAndRender('ALL');
     </script>
 </body>
 </html>
