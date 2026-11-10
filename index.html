@@ -244,7 +244,7 @@
                     <!-- Month Filter Dropdown -->
                     <div class="flex items-center gap-1.5">
                         <label class="text-[11px] text-slate-400 font-medium">Filter:</label>
-                        <select id="monthFilter" onchange="applyFilterAndRefresh()" class="bg-slate-900 border border-cardBorder rounded-xl px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-emerald-500 shadow-inner">
+                        <select id="monthFilter" onchange="refreshViewOnFilterChange()" class="bg-slate-900 border border-cardBorder rounded-xl px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-emerald-500 shadow-inner">
                             <option value="ALL">All Months</option>
                         </select>
                     </div>
@@ -436,7 +436,6 @@
                 const isRoundTrip = document.getElementById('isRoundTrip').checked;
 
                 if (editId) {
-                    // Update existing record
                     expenses = expenses.map(item => {
                         if (item.id == editId) {
                             return { ...item, date: dateVal, from: fromVal, to: toVal, fare: fareVal, ref: modeVal };
@@ -445,7 +444,6 @@
                     });
                     cancelEditMode();
                 } else {
-                    // Add Onward Journey
                     const onwardExpense = {
                         id: Date.now(),
                         date: dateVal,
@@ -456,7 +454,6 @@
                     };
                     expenses.push(onwardExpense);
 
-                    // If Round Trip is checked, automatically add return journey (swapped From/To)
                     if (isRoundTrip) {
                         const returnExpense = {
                             id: Date.now() + 1,
@@ -473,8 +470,6 @@
                 saveAndRender();
                 expenseForm.reset();
                 document.getElementById('expenseDate').value = new Date().toISOString().split('T')[0];
-                
-                // Automatically switch to Records tab to see entries
                 switchTab('records');
             });
         }
@@ -498,7 +493,6 @@
             document.getElementById('fareAmt').value = record.fare;
             document.getElementById('refMode').value = record.ref;
 
-            // Hide Round Trip option during edit
             document.getElementById('roundTripContainer').classList.add('hidden');
             document.getElementById('formTitleText').textContent = "Edit Expense Record";
             document.getElementById('formSubText').textContent = `Modifying record #${id}`;
@@ -579,27 +573,29 @@
             }
         }
 
-        // Get filtered expenses based on dropdown selection
+        // Get filtered and chronologically sorted expenses
         function getFilteredExpenses() {
             const monthFilterSelect = document.getElementById('monthFilter');
             const filterVal = monthFilterSelect ? monthFilterSelect.value : 'ALL';
             
-            if (!filterVal || filterVal === 'ALL') {
-                return expenses;
+            let filtered = expenses;
+            if (filterVal && filterVal !== 'ALL') {
+                filtered = expenses.filter(item => {
+                    if (!item.date) return false;
+                    return item.date.substring(0, 7) === filterVal;
+                });
             }
             
-            return expenses.filter(item => {
-                if (!item.date) return false;
-                const itemYM = item.date.substring(0, 7);
-                return itemYM === filterVal;
-            });
+            // Sort date-wise ascending (oldest to newest)
+            return [...filtered].sort((a, b) => new Date(a.date) - new Date(b.date));
         }
 
-        // Trigger filter refresh across views
-        function applyFilterAndRefresh() {
+        // Refresh UI when filter dropdown changes
+        function refreshViewOnFilterChange() {
             renderTable();
             renderPrintTable();
             renderStats();
+            renderChart();
         }
 
         // Export to Excel (CSV format)
