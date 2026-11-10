@@ -37,6 +37,9 @@
     <!-- Chart.js for Analytics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        *, ::before, ::box-sizing, ::after {
+            box-sizing: border-box;
+        }
         @page {
             size: A4;
             margin: 15mm;
@@ -68,7 +71,7 @@
         }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col transition-colors duration-200 pb-20 sm:pb-6">
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col transition-colors duration-200 pb-20 sm:pb-6 overflow-x-hidden">
 
     <!-- Header Navigation -->
     <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 shadow-md no-print">
@@ -79,7 +82,7 @@
                 </div>
                 <div>
                     <h1 class="text-sm sm:text-base font-bold tracking-tight text-white leading-tight">JKumar Travel Expense</h1>
-                    <p class="text-[10px] text-slate-400">Month-Wise Tracker &bull; LocalStorage</p>
+                    <p class="text-[10px] text-slate-400">Smart Auto-Suggest &bull; Round Trips</p>
                 </div>
             </div>
             
@@ -132,39 +135,44 @@
 
         <!-- TAB 2: ADD NEW EXPENSE -->
         <div id="tab-add" class="tab-content hidden space-y-4">
-            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg">
+            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 sm:p-5 shadow-lg w-full max-w-full">
                 <h2 class="text-base font-bold text-white mb-4 flex items-center gap-2">
                     <i data-lucide="plus-circle" class="w-5 h-5 text-green-400"></i> Add New Expense
                 </h2>
                 
-                <form id="expenseForm" class="space-y-4">
-                    <div>
+                <form id="expenseForm" class="space-y-4 w-full">
+                    <div class="w-full">
                         <label class="block text-xs font-medium text-slate-300 mb-1">Date</label>
                         <input type="date" id="expenseDate" required 
-                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-green-500 transition">
+                            class="w-full max-w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-green-500 transition box-border">
                     </div>
 
-                    <div>
+                    <div class="w-full">
                         <label class="block text-xs font-medium text-slate-300 mb-1">From</label>
-                        <input type="text" id="fromLoc" required placeholder="e.g. Malad Station" 
-                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-green-500 transition">
+                        <input type="text" id="fromLoc" list="locationSuggestions" required placeholder="e.g. Malad Station" 
+                            class="w-full max-w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-green-500 transition box-border">
                     </div>
 
-                    <div>
+                    <div class="w-full">
                         <label class="block text-xs font-medium text-slate-300 mb-1">To</label>
-                        <input type="text" id="toLoc" required placeholder="e.g. VDCR Office" 
-                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-green-500 transition">
+                        <input type="text" id="toLoc" list="locationSuggestions" required placeholder="e.g. VDCR Office" 
+                            class="w-full max-w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-green-500 transition box-border">
                     </div>
 
-                    <div>
+                    <!-- Shared Datalist for Auto-Suggest -->
+                    <datalist id="locationSuggestions">
+                        <!-- Populated via JS -->
+                    </datalist>
+
+                    <div class="w-full">
                         <label class="block text-xs font-medium text-slate-300 mb-1">Fare (₹)</label>
                         <input type="number" id="fareAmt" required min="0" step="1" placeholder="e.g. 15" 
-                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-green-500 transition">
+                            class="w-full max-w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-green-500 transition box-border">
                     </div>
 
-                    <div>
+                    <div class="w-full">
                         <label class="block text-xs font-medium text-slate-300 mb-1">Mode of Transport</label>
-                        <select id="refMode" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-green-500 transition">
+                        <select id="refMode" class="w-full max-w-full bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-green-500 transition box-border">
                             <option value="Share Auto">Share Auto</option>
                             <option value="Meter Auto">Meter Auto</option>
                             <option value="Bus">Bus</option>
@@ -172,6 +180,14 @@
                             <option value="Metro">Metro</option>
                             <option value="Cab / Taxi">Cab / Taxi</option>
                         </select>
+                    </div>
+
+                    <!-- Round Trip Checkbox Option -->
+                    <div class="flex items-center gap-2.5 pt-1">
+                        <input type="checkbox" id="isRoundTrip" class="w-4 h-4 accent-green-600 rounded bg-slate-900 border-slate-700 cursor-pointer">
+                        <label for="isRoundTrip" class="text-xs font-medium text-slate-300 cursor-pointer">
+                            Round Trip (Automatically add return journey data)
+                        </label>
                     </div>
 
                     <button type="submit" class="w-full bg-green-600 hover:bg-green-500 text-white font-semibold py-3 px-4 rounded-lg text-sm transition shadow-lg shadow-green-900/20 flex items-center justify-center gap-2">
@@ -297,7 +313,6 @@
                 activeSpan.classList.add('font-semibold');
             }
 
-            // Refresh chart if dashboard is shown
             if(tabName === 'dashboard') {
                 renderChart();
             }
@@ -371,28 +386,68 @@
             });
         }
 
-        // Form Submission
+        // Form Submission with Round Trip & Auto-Suggest Support
         const expenseForm = document.getElementById('expenseForm');
         if(expenseForm) {
             expenseForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 
-                const newExpense = {
-                    id: Date.now(),
-                    date: document.getElementById('expenseDate').value,
-                    from: document.getElementById('fromLoc').value.trim(),
-                    to: document.getElementById('toLoc').value.trim(),
-                    fare: parseFloat(document.getElementById('fareAmt').value),
-                    ref: document.getElementById('refMode').value
-                };
+                const dateVal = document.getElementById('expenseDate').value;
+                const fromVal = document.getElementById('fromLoc').value.trim();
+                const toVal = document.getElementById('toLoc').value.trim();
+                const fareVal = parseFloat(document.getElementById('fareAmt').value);
+                const modeVal = document.getElementById('refMode').value;
+                const isRoundTrip = document.getElementById('isRoundTrip').checked;
 
-                expenses.push(newExpense);
+                // 1. Add Onward Journey
+                const onwardExpense = {
+                    id: Date.now(),
+                    date: dateVal,
+                    from: fromVal,
+                    to: toVal,
+                    fare: fareVal,
+                    ref: modeVal
+                };
+                expenses.push(onwardExpense);
+
+                // 2. If Round Trip is checked, automatically add return journey (swapped From/To)
+                if (isRoundTrip) {
+                    const returnExpense = {
+                        id: Date.now() + 1,
+                        date: dateVal,
+                        from: toVal,
+                        to: fromVal,
+                        fare: fareVal,
+                        ref: modeVal
+                    };
+                    expenses.push(returnExpense);
+                }
+
                 saveAndRender();
                 expenseForm.reset();
                 document.getElementById('expenseDate').value = new Date().toISOString().split('T')[0];
                 
-                // Automatically switch to Records tab after saving to see the entry
+                // Automatically switch to Records tab to see entries
                 switchTab('records');
+            });
+        }
+
+        // Populate Location Auto-Suggest Datalist
+        function updateLocationSuggestions() {
+            const datalist = document.getElementById('locationSuggestions');
+            if(!datalist) return;
+
+            const locations = new Set();
+            expenses.forEach(item => {
+                if(item.from) locations.add(item.from);
+                if(item.to) locations.add(item.to);
+            });
+
+            datalist.innerHTML = '';
+            Array.from(locations).sort().forEach(loc => {
+                const opt = document.createElement('option');
+                opt.value = loc;
+                datalist.appendChild(opt);
             });
         }
 
@@ -506,6 +561,7 @@
             localStorage.setItem('jj_travel_expenses', JSON.stringify(expenses));
             
             updateMonthFilterOptions(currentMonthVal);
+            updateLocationSuggestions();
             renderTable();
             renderPrintTable();
             renderStats();
