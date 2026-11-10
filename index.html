@@ -244,7 +244,7 @@
                     <!-- Month Filter Dropdown -->
                     <div class="flex items-center gap-1.5">
                         <label class="text-[11px] text-slate-400 font-medium">Filter:</label>
-                        <select id="monthFilter" onchange="saveAndRender()" class="bg-slate-900 border border-cardBorder rounded-xl px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-emerald-500 shadow-inner">
+                        <select id="monthFilter" onchange="renderTable(); renderPrintTable(); renderStats(); renderChart();" class="bg-slate-900 border border-cardBorder rounded-xl px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-emerald-500 shadow-inner">
                             <option value="ALL">All Months</option>
                         </select>
                     </div>
@@ -470,11 +470,7 @@
                     }
                 }
 
-                // Keep current filter selection active upon save
-                const monthFilterSelect = document.getElementById('monthFilter');
-                const activeFilter = monthFilterSelect ? monthFilterSelect.value : 'ALL';
-
-                saveAndRender(activeFilter);
+                saveAndRender();
                 expenseForm.reset();
                 document.getElementById('expenseDate').value = new Date().toISOString().split('T')[0];
                 
@@ -550,20 +546,20 @@
         }
 
         // Populate Month Filter Options
-        function updateMonthFilterOptions(selectedMonthValue) {
+        function updateMonthFilterOptions() {
             const monthFilterSelect = document.getElementById('monthFilter');
             if(!monthFilterSelect) return;
             
+            const currentSelected = monthFilterSelect.value;
             const monthsSet = new Set();
+            
             expenses.forEach(item => {
-                if (item.date) {
-                    const ym = item.date.substring(0, 7); 
-                    if (ym.length === 7) monthsSet.add(ym);
+                if (item.date && item.date.length >= 7) {
+                    monthsSet.add(item.date.substring(0, 7));
                 }
             });
 
             const sortedMonths = Array.from(monthsSet).sort().reverse();
-            const currentSelected = selectedMonthValue || monthFilterSelect.value || 'ALL';
 
             monthFilterSelect.innerHTML = `<option value="ALL">All Months</option>`;
             sortedMonths.forEach(ym => {
@@ -576,7 +572,7 @@
                 monthFilterSelect.appendChild(opt);
             });
 
-            // Ensure selection persists correctly if valid
+            // Keep user's active filter selection if it still exists, else default to 'ALL'
             if (currentSelected === 'ALL' || monthsSet.has(currentSelected)) {
                 monthFilterSelect.value = currentSelected;
             } else {
@@ -588,7 +584,8 @@
         function getFilteredExpenses() {
             const monthFilterSelect = document.getElementById('monthFilter');
             const filterVal = monthFilterSelect ? monthFilterSelect.value : 'ALL';
-            if (filterVal === 'ALL' || !filterVal) {
+            
+            if (!filterVal || filterVal === 'ALL') {
                 return expenses;
             }
             return expenses.filter(item => item.date && item.date.startsWith(filterVal));
@@ -635,11 +632,8 @@
             const pwd = prompt("Enter password (8080) to delete this entry:");
             if (pwd === null) return;
             if (pwd === "8080") {
-                const monthFilterSelect = document.getElementById('monthFilter');
-                const activeMonth = monthFilterSelect ? monthFilterSelect.value : 'ALL';
-                
                 expenses = expenses.filter(item => item.id !== id);
-                saveAndRender(activeMonth);
+                saveAndRender();
             } else {
                 alert("Incorrect password! Deletion cancelled.");
             }
@@ -651,20 +645,17 @@
             if (pwd === null) return;
             if (pwd === "8080") {
                 expenses = [];
-                saveAndRender('ALL');
+                saveAndRender();
             } else {
                 alert("Incorrect password! Reset cancelled.");
             }
         }
 
         // Save to Device LocalStorage and Refresh UI
-        function saveAndRender(targetMonth = null) {
-            const monthFilterSelect = document.getElementById('monthFilter');
-            const currentMonthVal = targetMonth || (monthFilterSelect ? monthFilterSelect.value : 'ALL');
-            
+        function saveAndRender() {
             localStorage.setItem('jj_travel_expenses', JSON.stringify(expenses));
             
-            updateMonthFilterOptions(currentMonthVal);
+            updateMonthFilterOptions();
             updateLocationSuggestions();
             renderTable();
             renderPrintTable();
@@ -777,7 +768,7 @@
             const filterVal = monthFilterSelect ? monthFilterSelect.value : 'ALL';
             
             let subtitleText = "Travel Expense Claim Slip";
-            if (filterVal !== 'ALL' && filterVal) {
+            if (filterVal && filterVal !== 'ALL') {
                 const [year, monthNum] = filterVal.split('-');
                 const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
                 subtitleText = `Travel Expense Claim Slip - ${monthNames[parseInt(monthNum, 10) - 1]} ${year}`;
@@ -876,7 +867,7 @@
         }
 
         // Initial Load
-        saveAndRender('ALL');
+        saveAndRender();
     </script>
 </body>
 </html>
